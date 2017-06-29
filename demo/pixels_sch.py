@@ -26,4 +26,3 @@ for x in range(i.width):
         print(f'$EndComp')
         nc += 1
         sy = -1
-print(nc)
