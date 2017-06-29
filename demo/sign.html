@@ -742,11 +742,11 @@
 <div class="pixel" style="left:570px;top:350px;"></div>
 <div class="pixel" style="left:570px;top:360px;"></div>
 <script type="text/javascript">
+ let m = 0;
  function update() {
    t = new Date().getTime() / 1000;
    var q = document.querySelectorAll('.pixel');
    for (var i = 0; i < q.length; ++i) {
-     let m = 0;
      let r = 0, g = 0, b = 0;
      let x = parseInt(q[i].style.left, 10) / 10;
      let y = parseInt(q[i].style.top, 10) / 10;
@@ -770,7 +770,7 @@
    }
  }
  function setMode(sel) {
-   console.log(sel);
+   m = parseInt(sel.selectedOptions[0].value, 10);
  }
  window.setInterval(update, 50);
 </script>
