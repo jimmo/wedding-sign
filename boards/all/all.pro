@@ -24,7 +24,7 @@ ModuleOutlineThickness=0.150000000000
 version=1
 [eeschema]
 version=1
-LibDir=../sign
+LibDir=../
 [eeschema/libraries]
 LibName1=apa102c
 LibName2=conn
@@ -33,4 +33,4 @@ LibName3=power
 version=1
 NetIExt=net
 [cvpcb/equfiles]
-EquName1=${KIPRJMOD}/apa102c.equ
+EquName1=${KIPRJMOD}/../apa102c.equ

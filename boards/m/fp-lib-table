@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name apa102c_72m)(type KiCad)(uri "$(KIPRJMOD)/../apa102c_72m.pretty")(options "")(descr ""))
+  (lib (name connector)(type KiCad)(uri "$(KIPRJMOD)/../connector.pretty")(options "")(descr ""))
+)

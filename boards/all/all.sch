@@ -5,7 +5,7 @@ LIBS:power
 LIBS:sign-cache
 EELAYER 25 0
 EELAYER END
-$Descr A0 46811 33110
+$Descr A4 8268 11693 portrait
 encoding utf-8
 Sheet 1 1
 Title ""
