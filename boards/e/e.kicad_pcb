@@ -2,8 +2,8 @@
 
   (general
     (links 86)
-    (no_connects 2)
-    (area 27.407199 47.997199 184.335001 218.813901)
+    (no_connects 0)
+    (area 27.407199 47.9722 184.335001 218.8389)
     (thickness 1.6)
     (drawings 222)
     (tracks 472)
@@ -83,7 +83,7 @@
       (plotinvisibletext false)
       (padsonsilk false)
       (subtractmaskfromsilk false)
-      (outputformat 1)
+      (outputformat 3)
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
@@ -181,7 +181,7 @@
   (net_class Default "This is the default net class."
     (clearance 0.6)
     (trace_width 2)
-    (via_drill 1)
+    (via_dia 0.6)
     (via_drill 0.6)
     (uvia_dia 0.3)
     (uvia_drill 0.1)
@@ -232,7 +232,7 @@
   (net_class Signal ""
     (clearance 0.6)
     (trace_width 1)
-    (via_drill 1)
+    (via_dia 0.6)
     (via_drill 0.6)
     (uvia_dia 0.3)
     (uvia_drill 0.1)
