@@ -746,7 +746,7 @@
 <div class="pixel" style="left:570px;top:360px;"></div>
 <span id="colorConverter"></span>
 <script type="text/javascript">
- let m = 4;
+ let m = 6;
  let colors = {};
  let names = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
  for (var n of names) {
@@ -788,9 +788,18 @@
  }
  let hearts = [];
  let hc = [[1, 0],[3,0],[0, 1],[2,1],[4,1],[0,2],[4,2],[1,3],[3,3],[2,4]];
+ let coords = [];
  function md(e) {
    //hearts.push([Math.round(e.x/10), Math.round(e.y/10)]);
    //console.log(hearts);
+
+   if (event.ctrlKey) {
+     console.log(coords.join(','));
+   }
+
+   let x = parseInt(e.target.style.left, 10) / 10 - 3;
+   let y = parseInt(e.target.style.top, 10) / 10 - 2;
+   coords.push('(' + x + ',' + y + ',)');
  }
  let ht = 0;
  function update() {
