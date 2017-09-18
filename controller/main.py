@@ -104,6 +104,14 @@ def mode_distance(t, i, l, xbgr):
   if closest_distance_sensor == l:
     xbgr[2] = 255
 
+CIRCLES = []
+
+@micropython.native
+def mode_circles(t, i, l, xbgr):
+  x, y = COORDS_X[i], COORDS_Y[i]
+  for cx, cy, cr2, h in CIRCLES:
+    if (cx-x)**2 + (cy-y)**2 < cr2:
+      rainbow(h, xbgr)
 
 LETTER_INDEXES = [
   (80,  1,), # e
@@ -127,6 +135,7 @@ MODES = [
   mode_wave,
   mode_rainbow_x,
   mode_distance,
+  mode_circles,
 ]
 
 MODE_DELAYS = [
@@ -142,7 +151,7 @@ MODE_DELAYS = [
   5,
 ]
 
-mode_index = 7
+mode_index = 8
 
 def next_mode():
   global mode_index
@@ -246,6 +255,11 @@ def main():
     if DISTANCE_SENSORS[di].mm < DISTANCE_SENSORS[closest_distance_sensor].mm:
       closest_distance_sensor = di
     di = (di + 1) % len(DISTANCE_SENSORS)
+
+    if mode_index == 8:
+      while len(CIRCLES) > 1:
+        CIRCLES.pop(0)
+      CIRCLES.append((random.randint(0, 50), random.randint(0, 40), random.randint(20, 40), random.randint(0, 120),))
 
     utime.sleep_ms(MODE_DELAYS[mode_index])
     update(t)

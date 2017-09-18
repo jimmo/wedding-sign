@@ -747,26 +747,15 @@
 <span id="colorConverter"></span>
 <script type="text/javascript">
  let m = 6;
- let colors = {};
- let names = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
- for (var n of names) {
-   let e = document.getElementById('colorConverter');
-   e.style.color = n;
-   let rgb = window.getComputedStyle(e).color;
-   rgb = rgb.substr(4, rgb.length-5).split(',');
-   let r = parseInt(rgb[0], 10) / 255;
-   let g = parseInt(rgb[1], 10) / 255;
-   let b = parseInt(rgb[2], 10) / 255;
-   colors[n] = [r,g,b];
- }
+ let rainbow = [];
  function hsvToRgb(h, s, v) {
-   var r, g, b;
+   let r, g, b;
 
-   var i = Math.floor(h * 6);
-   var f = h * 6 - i;
-   var p = v * (1 - s);
-   var q = v * (1 - f * s);
-   var t = v * (1 - (1 - f) * s);
+   const i = Math.floor(h * 6);
+   const f = h * 6 - i;
+   const p = v * (1 - s);
+   const q = v * (1 - f * s);
+   const t = v * (1 - (1 - f) * s);
 
    switch (i % 6) {
      case 0: r = v, g = t, b = p; break;
@@ -778,6 +767,9 @@
    }
 
    return [r, g, b];
+ }
+ for (let i = 0; i < 7; ++i) {
+   rainbow.push(hsvToRgb(i/7, 1, 1));
  }
  let cx = 20;
  let cy = 20;
@@ -888,12 +880,13 @@
      }
      if (m == 5) {
        // letters
-       let n = names[(Math.floor(t/200) + l)%names.length];
-       let c = colors[n];
-       console.log(n, c);
+       let c = rainbow[(Math.floor(t/200) + l)%rainbow.length];
        r = c[0];
        g = c[1];
        b = c[2];
+     }
+     if (m == 6) {
+
      }
      q[i].style.backgroundColor = 'rgb(' + Math.floor(r*255) + ',' + Math.floor(g*255) + ',' + Math.floor(b*255) + ')';
    }
