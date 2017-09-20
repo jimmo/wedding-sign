@@ -21,6 +21,7 @@
 	<option value="3">rainbow</option>
 	<option value="4">hearts</option>
 	<option value="5">letters</option>
+	<option value="6">line</option>
       </select>
       <div class="pixel" style="left:30px;top:110px;"></div>
 <div class="pixel" style="left:30px;top:120px;"></div>
@@ -803,6 +804,11 @@
    if (t - ht > 500) {
      hearts.push([Math.round(Math.random() * 80), Math.round(Math.random() * 40), t, Math.round(Math.random() * 4000)]);
    }
+
+   let lx1 = 0, ly1 = 40, lx2 = 50, ly2 = 0;
+   let lxm = (lx1+lx2)/2;
+   let lym = (ly1+ly2)/2;
+
    var q = document.querySelectorAll('.pixel');
    for (var i = 0; i < q.length; ++i) {
      let r = 0, g = 0, b = 0;
@@ -886,7 +892,15 @@
        b = c[2];
      }
      if (m == 6) {
-
+       if ((x - lx1)*(lx2-lx1) + (y - ly1)*(ly2-ly1) > 0) {
+         r = 1;
+         g = 0;
+         b = 0;
+       } else {
+         r = 0;
+         g = 1;
+         b = 0;
+       }
      }
      q[i].style.backgroundColor = 'rgb(' + Math.floor(r*255) + ',' + Math.floor(g*255) + ',' + Math.floor(b*255) + ')';
    }
