@@ -6,13 +6,18 @@ import micropython
 import random
 import gc
 
-strip = pyb.SPI(1, pyb.SPI.MASTER, baudrate=4000000, crc=None, bits=8, firstbit=pyb.SPI.MSB, phase=1)
+_BRIGHTNESS = const(0b11100100)
+
+_STRIP = pyb.SPI(1, pyb.SPI.MASTER, baudrate=4000000, crc=None, bits=8, firstbit=pyb.SPI.MSB, phase=1)
 
 DISTANCE_SENSORS = [hcsr04.HCSR04(machine.Pin(p), machine.Pin(p)) for p in ('X1', 'X2', 'X3', 'X4')]
 closest_distance_sensor = 0
 
+_USER_BUTTON = pyb.Switch()
+
 @micropython.native
 def rainbow(h, xbgr):
+  # h is hue between 0-119.
   if h < 20:
     xbgr[3] = 255
     xbgr[2] = (h * 255) // 20
@@ -57,11 +62,16 @@ def pixel_blank(t, i, l, xbgr):
   xbgr[1], xbgr[2], xbgr[3] = 0, 0, 0
 
 @micropython.native
+def frame_nop(t):
+  pass
+
+@micropython.native
 def pixel_rainbow_letters(t, i, l, xbgr):
+  t = t // 4
   if l == t % 8:
     xbgr[1], xbgr[2], xbgr[3] = RAINBOW_COLORS[t%len(RAINBOW_COLORS)]
   else:
-    xbgr[1], xbgr[2], xbgr[3] = xbgr[1]//2, xbgr[2]//2, xbgr[3]//2
+    xbgr[1], xbgr[2], xbgr[3] = xbgr[1]*5//6, xbgr[2]*5//6, xbgr[3]*5//6
 
 @micropython.native
 def pixel_fire(t, i, l, xbgr):
@@ -72,23 +82,30 @@ def pixel_fire(t, i, l, xbgr):
 
 @micropython.native
 def pixel_red_sparkle(t, i, l, xbgr):
-  xbgr[3], xbgr[2], xbgr[1] = WAVE[(t*10 + i*400) % len(WAVE)], 0, 0
+  x = COORDS_X[i]
+  xbgr[3], xbgr[2], xbgr[1] = 2 * WAVE[(t*10 + i*400) % len(WAVE)] * HEAT_X2[x] // 128, 0, 0
+  #xbgr[3], xbgr[2], xbgr[1] = 2 * WAVE[(t*10 + i*400) % len(WAVE)], 0, 0
 
 @micropython.native
 def pixel_green_sparkle(t, i, l, xbgr):
-  xbgr[3], xbgr[2], xbgr[1] = 0, WAVE[(t*10 + i*400) % len(WAVE)], 0
+  x = COORDS_X[i]
+  xbgr[3], xbgr[2], xbgr[1] = 0, 2 * WAVE[(t*10 + i*400) % len(WAVE)] * HEAT_X2[x] // 128, 0
 
 @micropython.native
 def pixel_blue_sparkle(t, i, l, xbgr):
-  xbgr[3], xbgr[2], xbgr[1] = 0, 0, WAVE[(t*10 + i*400) % len(WAVE)]
+  x = COORDS_X[i]
+  xbgr[3], xbgr[2], xbgr[1] = 0, 0, 2 * WAVE[(t*10 + i*400) % len(WAVE)] * HEAT_X2[x] // 128
 
 @micropython.native
 def pixel_scan(t, i, l, xbgr):
   xbgr[1], xbgr[2], xbgr[3] = 0, 0, 0
-  if COORDS_Y[i] == t%41:
-    xbgr[3] = 255
-  if COORDS_X[i] == t%50:
-    xbgr[2] = 255
+  x, y = COORDS_X[i], COORDS_Y[i]
+  for i in range(0, 50, 10):
+    if x == t%40:
+      xbgr[3] = 255
+    if y == t%50:
+      xbgr[2] = 255
+    t += 10
 
 @micropython.native
 def pixel_wave_green(t, i, l, xbgr):
@@ -97,7 +114,10 @@ def pixel_wave_green(t, i, l, xbgr):
 @micropython.native
 def pixel_rainbow_x(t, i, l, xbgr):
   h = t*2 + COORDS_X[i]
-  rainbow(h % 120, xbgr)
+  if l < 4:
+    rainbow(h % 120, xbgr)
+  else:
+    rainbow((h+60) % 120, xbgr)
 
 prev_l = -1
 
@@ -123,6 +143,24 @@ def pixel_line(t, i, l, xbgr):
   else:
     xbgr[1], xbgr[2], xbgr[3] = CURRENT_COLOUR2[1], CURRENT_COLOUR2[2], CURRENT_COLOUR2[3]
 
+@micropython.native
+def frame_line(t):
+  if t == 0:
+    rainbow(random.randint(0,119), CURRENT_COLOUR1)
+    rainbow(random.randint(0,119), CURRENT_COLOUR2)
+  if LINE_COORDS[0] == 0 and LINE_COORDS[1] > 0:
+    LINE_COORDS[1] -= 2
+    LINE_COORDS[3] += 2
+  if LINE_COORDS[1] == 0 and LINE_COORDS[0] < 50:
+    LINE_COORDS[0] += 2
+    LINE_COORDS[2] -= 2
+  if LINE_COORDS[0] == 50 and LINE_COORDS[1] < 40:
+    LINE_COORDS[1] += 2
+    LINE_COORDS[3] -= 2
+  if LINE_COORDS[1] == 40 and LINE_COORDS[0] > 0:
+    LINE_COORDS[0] -= 2
+    LINE_COORDS[2] += 2
+
 CIRCLES = []
 CURRENT_COLOUR1 = bytearray(b'\x00\x00\x00\xff')
 CURRENT_COLOUR2 = bytearray(b'\x00\x00\xff\x00')
@@ -135,6 +173,12 @@ def pixel_circles(t, i, l, xbgr):
       rainbow(h, xbgr)
 
 @micropython.native
+def frame_circles(t):
+  while len(CIRCLES) > 1:
+    CIRCLES.pop(0)
+  CIRCLES.append((random.randint(0, 50), random.randint(0, 40), random.randint(20, 40), random.randint(0, 119),))
+
+@micropython.native
 def pixel_flash(t, i, l, xbgr):
   if t in (0, 5, 15, 18, 40, 43, 47) or t > 55:
     xbgr[1], xbgr[2], xbgr[3] = random.randint(0,1)*255, random.randint(0,1)*255, random.randint(0,1)*255
@@ -145,6 +189,65 @@ def pixel_flash(t, i, l, xbgr):
 def pixel_pulse(t, i, l, xbgr):
   x = WAVE[(t*4)%len(WAVE)]
   xbgr[1], xbgr[2], xbgr[3] = CURRENT_COLOUR1[1] * x // 128, CURRENT_COLOUR1[2] * x // 128, CURRENT_COLOUR1[3] * x // 128
+
+@micropython.native
+def pixel_rain(t, i, l, xbgr):
+  x, y = COORDS_X[i], COORDS_Y[i]
+  xbgr[1], xbgr[2], xbgr[3] = 0, 0, 0
+  for j in range(3):
+    d = (x * 37 + j*(x**3*23) + x + t - y) % 40
+    if d < 8:
+      xbgr[1] = max(xbgr[1], CURRENT_COLOUR1[1] // (1<<d))
+      xbgr[2] = max(xbgr[2], CURRENT_COLOUR1[2] // (1<<d))
+      xbgr[3] = max(xbgr[3], CURRENT_COLOUR1[3] // (1<<d))
+
+@micropython.native
+def frame_pulse(t):
+  if t % 64 == 0:
+    rainbow(random.randint(0,119), CURRENT_COLOUR1)
+
+@micropython.native
+def frame_rain(t):
+  if t == 0:
+    rainbow(random.randint(0,119), CURRENT_COLOUR1)
+
+HEAT_X = bytearray(50)
+HEAT_X2 = bytearray(50)
+
+@micropython.native
+def pixel_heat(t, i, l, xbgr):
+  x = COORDS_X[i]
+  xbgr[1] = HEAT_X[x]
+  xbgr[3] = 255-HEAT_X[x]
+
+@micropython.native
+def lerp(x, x1, x2, y1, y2):
+  return y1 + (y2-y1) * (x - x1) // (x2 - x1)
+
+NORMALIZED_DISTANCE = [0]*4
+
+@micropython.native
+def frame_heat(t):
+  for i in range(4):
+    NORMALIZED_DISTANCE[i] = DISTANCE_SENSORS[i].mm
+  dmin = min(500, min(NORMALIZED_DISTANCE))
+  dmax = max(1500, max(NORMALIZED_DISTANCE))
+  r = dmax - dmin
+  if r == 0:
+    for i in range(len(HEAT_X)):
+      HEAT_X[i] = 0
+    return
+  for i in range(4):
+    NORMALIZED_DISTANCE[i] = (NORMALIZED_DISTANCE[i] - dmin) * 255 // r
+
+  for i in range(17):
+    HEAT_X[i] = (HEAT_X[i] + lerp(i, 0, 17, NORMALIZED_DISTANCE[0], NORMALIZED_DISTANCE[1])) // 2
+  for i in range(17, 33):
+    HEAT_X[i] = (HEAT_X[i] + lerp(i, 17, 33, NORMALIZED_DISTANCE[1], NORMALIZED_DISTANCE[2])) // 2
+  for i in range(33, 50):
+    HEAT_X[i] = (HEAT_X[i] + lerp(i, 33, 50, NORMALIZED_DISTANCE[2], NORMALIZED_DISTANCE[3])) // 2
+  for i in range(len(HEAT_X)):
+    HEAT_X2[i] = max(50, 255-HEAT_X[i])
 
 @micropython.native
 def pixel_fade_dissolve(t, i, l, xbgr):
@@ -175,40 +278,6 @@ def pixel_fade_swipe_right(t, i, l, xbgr):
 def pixel_fade_fade(t, i, l, xbgr):
   xbgr[1], xbgr[2], xbgr[3] = xbgr[1]//2, xbgr[2]//2, xbgr[3]//2
 
-@micropython.native
-def frame_nop(t):
-  pass
-
-LINE_COORDS = bytearray([0,40,50,0])
-@micropython.native
-def frame_line(t):
-  if t == 0:
-    rainbow(random.randint(0,119), CURRENT_COLOUR1)
-    rainbow(random.randint(0,119), CURRENT_COLOUR2)
-  if LINE_COORDS[0] == 0 and LINE_COORDS[1] > 0:
-    LINE_COORDS[1] -= 2
-    LINE_COORDS[3] += 2
-  if LINE_COORDS[1] == 0 and LINE_COORDS[0] < 50:
-    LINE_COORDS[0] += 2
-    LINE_COORDS[2] -= 2
-  if LINE_COORDS[0] == 50 and LINE_COORDS[1] < 40:
-    LINE_COORDS[1] += 2
-    LINE_COORDS[3] -= 2
-  if LINE_COORDS[1] == 40 and LINE_COORDS[0] > 0:
-    LINE_COORDS[0] -= 2
-    LINE_COORDS[2] += 2
-
-@micropython.native
-def frame_circles(t):
-  while len(CIRCLES) > 1:
-    CIRCLES.pop(0)
-  CIRCLES.append((random.randint(0, 50), random.randint(0, 40), random.randint(20, 40), random.randint(0, 119),))
-
-@micropython.native
-def frame_pulse(t):
-  if t % 64 == 48:
-    rainbow(random.randint(0,119), CURRENT_COLOUR1)
-
 LETTER_INDEXES = [
   (80,  1,), # e
   (184, 2,), # d
@@ -222,119 +291,49 @@ LETTER_INDEXES = [
   (722, 0),  # m
 ]
 
-NUM_MODES = const(11)
+NUM_MODES = const(12)
 
-MODE_PIXEL = [
-  pixel_rainbow_letters,  # 0
-  pixel_fire,             # 1
-  pixel_red_sparkle,      # 2
-  pixel_green_sparkle,    # 3
-  pixel_blue_sparkle,     # 4
-  pixel_scan,             # 5
-  pixel_wave_green,       # 6
-  pixel_rainbow_x,        # 7
-  pixel_line,             # 8
-  pixel_circles,          # 9
-  pixel_pulse,            # 10
+MODES = [
+  (pixel_rainbow_letters, frame_nop, 35, 10000, False,),
+  (pixel_fire, frame_nop, 35, 10000, False,),
+  (pixel_red_sparkle, frame_heat, 35, 10000, True,),
+  (pixel_green_sparkle, frame_heat, 35, 10000, True,),
+  (pixel_blue_sparkle, frame_heat, 35, 10000, True,),
+  (pixel_rain, frame_rain, 35, 10000, False,),
+  (pixel_wave_green, frame_nop, 35, 10000, True,),
+  (pixel_rainbow_x, frame_nop, 35, 10000, False,),
+  (pixel_line, frame_line, 35, 10000, False,),
+  (pixel_circles, frame_circles, 35, 10000, False,),
+  (pixel_pulse, frame_pulse, 35, 10000, False,),
+  (pixel_heat, frame_heat, 35, 10000, True,),
 
-  pixel_fade_dissolve,    # 11
-  pixel_fade_swipe_down,  # 12
-  pixel_fade_swipe_up,    # 13
-  pixel_fade_swipe_left,  # 14
-  pixel_fade_swipe_right, # 15
-  pixel_fade_fade,        # 16
+  (pixel_fade_dissolve, frame_nop, 0, 2000, False,),
+  (pixel_fade_swipe_down, frame_nop, 0, 2000, False,),
+  (pixel_fade_swipe_up, frame_nop, 0, 2000, False,),
+  (pixel_fade_swipe_left, frame_nop, 0, 2000, False,),
+  (pixel_fade_swipe_right, frame_nop, 0, 2000, False,),
+  (pixel_fade_fade, frame_nop, 0, 2000, False,),
 ]
 
-MODE_FRAME = [
-  frame_nop,     # 0
-  frame_nop,     # 1
-  frame_nop,     # 2
-  frame_nop,     # 3
-  frame_nop,     # 4
-  frame_nop,     # 5
-  frame_nop,     # 6
-  frame_nop,     # 7
-  frame_line,    # 8
-  frame_circles, # 9
-  frame_pulse,   # 10
+advance_mode = False
+mode_index = 0
 
-  frame_nop,     # 11
-  frame_nop,     # 12
-  frame_nop,     # 13
-  frame_nop,     # 14
-  frame_nop,     # 15
-  frame_nop,     # 16
-]
+def on_switch():
+  global advance_mode
+  advance_mode = True
 
-MODE_DELAYS = [
-  5,  # 0
-  5,  # 1
-  5,  # 2
-  5,  # 3
-  5,  # 4
-  5,  # 5
-  5,  # 6
-  5,  # 7
-  5,  # 8
-  5,  # 9
-  5,  # 10
-
-  0,  # 11
-  0,  # 12
-  0,  # 13
-  0,  # 14
-  0,  # 15
-  0,  # 16
-  0,  # 17
-  0,  # 12
-  0,  # 12
-  0,  # 12
-  0,  # 12
-  0,  # 12
-]
-
-MODE_DURATION = [
-  5000,  # 0
-  5000,  # 1
-  5000,  # 2
-  5000,  # 3
-  5000,  # 4
-  5000,  # 5
-  5000,  # 6
-  5000,  # 7
-  5000,  # 8
-  5000,  # 9
-  5000,  # 10
-
-  2000,  # 11
-  2000,  # 12
-  2000,  # 13
-  2000,  # 14
-  2000,  # 15
-  2000,  # 16
-  2000,  # 17
-  2000,  # 18
-  2000,  # 19
-]
-
-mode_index = 8
-
-def next_mode():
-  global mode_index
-  mode_index = (mode_index + 1) % len(MODES)
-
-pyb.Switch().callback(next_mode)
+_USER_BUTTON.callback(on_switch)
 
 @micropython.native
 def update(t: int):
-  gc.disable()
+  #gc.disable()
   gc.collect()
   p = 4
   s = utime.ticks_ms()
   l = 0
   li = 0
   ln = LETTER_INDEXES[li][0]
-  mode_pixel = MODE_PIXEL[mode_index]
+  mode_pixel = MODES[mode_index][0]
   m = memoryview(pixeldata)
   for i in range(_LEDS):
     if i == ln:
@@ -344,15 +343,15 @@ def update(t: int):
     mode_pixel(t, i, l, m[p:p+4])
     p += 4
   n = utime.ticks_diff(utime.ticks_ms(), s)
-  gc.enable()
-  strip.send(pixeldata)
-  print(n)
+  #gc.enable()
+  _STRIP.send(pixeldata)
+  #print(n)
 
 def clear():
   buf = pixeldata
   p = 4
   for i in range(_LEDS):
-    buf[p] = 0b11100100
+    buf[p] = _BRIGHTNESS
     p += 1
     buf[p] = 0
     p += 1
@@ -360,13 +359,13 @@ def clear():
     p += 1
     buf[p] = 0
     p += 1
-  strip.send(pixeldata)
+  _STRIP.send(pixeldata)
 
 def vert(x):
   buf = pixeldata
   p = 4
   for i in range(_LEDS):
-    buf[p] = 0b11100100
+    buf[p] = _BRIGHTNESS
     p += 1
     buf[p] = 255 if COORDS_X[i] == x else 0
     p += 1
@@ -374,13 +373,13 @@ def vert(x):
     p += 1
     buf[p] = 0
     p += 1
-  strip.send(pixeldata)
+  _STRIP.send(pixeldata)
 
 def horiz(y):
   buf = pixeldata
   p = 4
   for i in range(_LEDS):
-    buf[p] = 0b11100100
+    buf[p] = _BRIGHTNESS
     p += 1
     buf[p] = 255 if COORDS_Y[i] == y else 0
     p += 1
@@ -388,11 +387,11 @@ def horiz(y):
     p += 1
     buf[p] = 0
     p += 1
-  strip.send(pixeldata)
+  _STRIP.send(pixeldata)
 
 @micropython.native
 def main():
-  global closest_distance_sensor, mode_index
+  global closest_distance_sensor, mode_index, advance_mode
   for i in range(4):
     pixeldata[i] = 0
     for j in range(20):
@@ -406,7 +405,7 @@ def main():
     DIST[i+_LEDS] = int(((x-17)**2 + y**2)**0.5 * 20)
     DIST[i+_LEDS*2] = int(((x-33)**2 + y**2)**0.5 * 20)
     DIST[i+_LEDS*3] = int(((x-50)**2 + y**2)**0.5 * 20)
-    pixeldata[p] = 0b11100000 | 0b00100
+    pixeldata[p] = _BRIGHTNESS
     p += 4
 
   for i in range(7):
@@ -415,43 +414,52 @@ def main():
     RAINBOW_COLORS.append(xbgr[1:])
 
   for i in range(len(WAVE)):
-    WAVE[i] = int(32 * (1 + math.sin(math.pi * 2 * i / len(WAVE))))
+    WAVE[i] = int(32 * (1 + math.sin(math.pi * 2 * i / len(WAVE) - math.pi/2)))
 
   mode_time = utime.ticks_ms()
-  mode_time_limit = MODE_DURATION[mode_index]
+  mode_time_limit = MODES[mode_index][3]
 
-  last_pixel = -1
-  last_fade = -1
+  mode_index_last_pixel = mode_index
+  mode_index_last_fade = -1
 
   t = 0
   di = 0
   while True:
-    DISTANCE_SENSORS[di].update()
-    if DISTANCE_SENSORS[di].mm < DISTANCE_SENSORS[closest_distance_sensor].mm:
-      closest_distance_sensor = di
-    di = (di + 1) % len(DISTANCE_SENSORS)
+    s = utime.ticks_ms()
 
-    if utime.ticks_diff(utime.ticks_ms(), mode_time) > mode_time_limit:
-      if mode_index < NUM_MODES:
+    if MODES[mode_index][4]:
+      DISTANCE_SENSORS[di].update()
+      if DISTANCE_SENSORS[di].mm < DISTANCE_SENSORS[closest_distance_sensor].mm:
+        closest_distance_sensor = di
+      di = (di + 1) % len(DISTANCE_SENSORS)
+
+    if utime.ticks_diff(utime.ticks_ms(), mode_time) > mode_time_limit or (advance_mode and not _USER_BUTTON.value()):
+      if not advance_mode and mode_index < NUM_MODES:
+        # Currently pixel, move to fade.
         while True:
-          mode_index = random.randint(NUM_MODES, len(MODE_PIXEL)-1)
-          if mode_index != last_pixel:
+          mode_index = random.randint(NUM_MODES, len(MODES)-1)
+          if mode_index != mode_index_last_fade:
             break
-        last_pixel = mode_index
+        mode_index_last_fade = mode_index
       else:
+        # Fade moving to pixel.
         while True:
           mode_index = random.randint(0, NUM_MODES-1)
-          if mode_index != last_fade:
+          if mode_index != mode_index_last_pixel:
             break
-        last_fade = mode_index
+        mode_index_last_pixel = mode_index
         clear()
+      advance_mode = False
       mode_time = utime.ticks_ms()
-      mode_time_limit = MODE_DURATION[mode_index]
+      mode_time_limit = MODES[mode_index][3]
       t = 0
 
-    utime.sleep_ms(MODE_DELAYS[mode_index])
-    MODE_FRAME[mode_index](t)
+    MODES[mode_index][1](t)
     update(t)
     t += 1
+    n = utime.ticks_diff(utime.ticks_ms(), s)
+    utime.sleep_ms(max(1, MODES[mode_index][2] - n - 1))
+    n = utime.ticks_diff(utime.ticks_ms(), s)
+    print(n)
 
 main()

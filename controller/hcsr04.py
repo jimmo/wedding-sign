@@ -16,8 +16,9 @@ class HCSR04:
     utime.sleep_us(10)
     self._trigger_pin.value(0)
     self._echo_pin.init(mode=machine.Pin.IN, pull=machine.Pin.PULL_NONE)
-    t = machine.time_pulse_us(self._echo_pin, 1, 500*2*30)
+    t = machine.time_pulse_us(self._echo_pin, 1, 15000)
     if t < 0:
-      self.mm = 4000
+      t = 2000
     else:
-      self.mm = t * 3432 // 20000
+      t = t * 3432 // 20000
+    self.mm = (self.mm + t) // 2
