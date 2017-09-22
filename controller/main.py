@@ -294,18 +294,18 @@ LETTER_INDEXES = [
 NUM_MODES = const(12)
 
 MODES = [
-  (pixel_rainbow_letters, frame_nop, 35, 10000, False,),
-  (pixel_fire, frame_nop, 35, 10000, False,),
-  (pixel_red_sparkle, frame_heat, 35, 10000, True,),
-  (pixel_green_sparkle, frame_heat, 35, 10000, True,),
-  (pixel_blue_sparkle, frame_heat, 35, 10000, True,),
-  (pixel_rain, frame_rain, 35, 10000, False,),
-  (pixel_wave_green, frame_nop, 35, 10000, True,),
-  (pixel_rainbow_x, frame_nop, 35, 10000, False,),
-  (pixel_line, frame_line, 35, 10000, False,),
-  (pixel_circles, frame_circles, 35, 10000, False,),
-  (pixel_pulse, frame_pulse, 35, 10000, False,),
-  (pixel_heat, frame_heat, 35, 10000, True,),
+  (pixel_rainbow_letters, frame_nop, 35, 30000, False,),
+  (pixel_fire, frame_nop, 35, 30000, False,),
+  (pixel_red_sparkle, frame_heat, 35, 30000, True,),
+  (pixel_green_sparkle, frame_heat, 35, 30000, True,),
+  (pixel_blue_sparkle, frame_heat, 35, 30000, True,),
+  (pixel_rain, frame_rain, 35, 30000, False,),
+  (pixel_wave_green, frame_nop, 35, 30000, True,),
+  (pixel_rainbow_x, frame_nop, 35, 30000, False,),
+  (pixel_line, frame_line, 35, 30000, False,),
+  (pixel_circles, frame_circles, 35, 30000, False,),
+  (pixel_pulse, frame_pulse, 35, 30000, False,),
+  (pixel_heat, frame_heat, 35, 30000, True,),
 
   (pixel_fade_dissolve, frame_nop, 0, 2000, False,),
   (pixel_fade_swipe_down, frame_nop, 0, 2000, False,),
@@ -460,6 +460,6 @@ def main():
     n = utime.ticks_diff(utime.ticks_ms(), s)
     utime.sleep_ms(max(1, MODES[mode_index][2] - n - 1))
     n = utime.ticks_diff(utime.ticks_ms(), s)
-    print(n)
+    #print(n)
 
 main()
