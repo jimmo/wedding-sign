@@ -83,7 +83,7 @@
       (plotinvisibletext false)
       (padsonsilk false)
       (subtractmaskfromsilk false)
-      (outputformat 1)
+      (outputformat 3)
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
@@ -653,7 +653,7 @@
   (net_class Default "This is the default net class."
     (clearance 0.6)
     (trace_width 2)
-    (via_drill 1)
+    (via_dia 0.6)
     (via_drill 0.6)
     (uvia_dia 0.3)
     (uvia_drill 0.1)
@@ -922,7 +922,7 @@
   (net_class Signal ""
     (clearance 0.6)
     (trace_width 1)
-    (via_drill 1)
+    (via_dia 0.6)
     (via_drill 0.6)
     (uvia_dia 0.3)
     (uvia_drill 0.1)
